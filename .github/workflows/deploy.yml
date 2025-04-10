@@ -1,0 +1,65 @@
+name: CI - Deploy Infra con Terraform
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push request events but only for the "develop" branch
+  push:
+    branches: 
+      - main
+      - develop
+  workflow_dispatch:  # Habilita ejecución manual, al final eliminar
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out o bajar este repo al ambiente de trabajo bajo variable $GITHUB_WORKSPACE,
+      - name: Checkout codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar Google Cloud SDK
+#        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+#          service_account: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Install Docker CLI only, # Necesario para bajar imagen en Cloud Run que se caen en TF
+        run: |
+          curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.7.tgz -o docker.tgz
+          tar xzvf docker.tgz
+          sudo mv docker/docker /usr/local/bin/
+          docker --version
+
+      - name: Start Docker daemon  # Correr demonio Docker para bajar img - pull
+        run: |
+          sudo dockerd > /dev/null 2>&1 &
+          sleep 5
+          docker info
+      
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Inicializar Terraform
+        run: |
+          cd infra/preprod    #Por ahora corre para ambos env, luego canalizar por DIR
+          terraform init
+
+      - name: Planificar Terraform
+        run: terraform plan
+
+      - name: Aplicar Terraform
+        run: terraform apply -auto-approve
+
+      # Runs a single command using the runners shell
+      - name: Run a one-line script
+        run: echo Hello, world!
+
+      # Runs a set of commands using the runners shell
+      - name: Run a multi-line script
+        run: |
+          echo Add other actions to build,
+          echo test, and deploy your project.
