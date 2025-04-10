@@ -1,0 +1,178 @@
+provider "google" {
+  project = "poc-serviciosgcp"
+  region  = "us-central1" #Comun para todos los recursos
+}
+
+# Crear 2 Cloud Run seguros
+resource "google_cloud_run_service" "cloud_run_feed" {
+  name     = "cloud-run-feed"
+  location = "us-central1"
+  
+  #Donde la imagen de cada CR, debe tener codigo necesario para funcionar, PEND esa logica...
+  #En este caso, será una imagen basica que lleve terraform, luego debe llevar logica c/u 
+  template {
+    spec {
+      containers {
+        #        image = "hello-world:latest"    #Imagen oficial docker hub 28MB
+        image = "gcr.io/cloudrun/hello:latest" #Esta imagen queda andando, a diferencia otras, que se bajan y manda error en TF
+        #        ports {
+        #            container_port = 8080  # Default
+        #        }
+      }
+    }
+  }
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+  autogenerate_revision_name = true
+}
+
+resource "google_cloud_run_service" "cloud_run_normaliza" {
+  name     = "cloud-run-normaliza"
+  location = "us-central1"
+  template {
+    spec {
+      containers {
+        image = "gcr.io/cloudrun/hello:latest" #Esta imagen queda andando, a diferencia otras, que se bajan y manda error en TF
+      }
+    }
+  }
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+  autogenerate_revision_name = true
+}
+
+# Crear 2 Cloud Storage Buckets seguros - Extraccion y Normalizacion
+# Se crean, Multi-Region, en US, Acceso No Publico, Con versionamiento, sin politica de retencion, Sin etiquetas,
+# Encriptacion data reposo y transito admin x Google, 
+resource "google_storage_bucket" "extraccion_seguro" {
+  name          = "extraccion-seguro"
+  location      = "US"
+  storage_class = "STANDARD"
+  versioning {
+    enabled = true
+  }
+  # Bloquea el acceso público
+  uniform_bucket_level_access = true
+}
+
+resource "google_storage_bucket" "normalizacion_seguro" {
+  name          = "normalizacion-seguro"
+  location      = "US"
+  storage_class = "STANDARD"
+  versioning {
+    enabled = true
+  }
+  # Bloquea el acceso público
+  uniform_bucket_level_access = true
+}
+
+######Creando Pub/Sub de ejemplo - Caso 1
+resource "google_pubsub_topic" "tarj_expuestas_vigentes" {
+  name = "tarj-expuestas-vigentes"
+}
+resource "google_pubsub_topic" "reinsistencia_tarj_expuestas_vigentes" {
+  name = "reinsistencia-tarj-expuestas-vigentes"
+}
+resource "google_pubsub_topic" "reporte_cargas_tarjetas_lotes_manual" {
+  name = "reporte-cargas-tarjetas-lotes-manual"
+}
+resource "google_pubsub_topic" "mia_notifica_a_deteccion" {
+  name = "mia_notifica_a_deteccion"
+}
+
+###Subcripciones
+resource "google_pubsub_subscription" "sub_tarj_expuestas_vigentes" {
+  name                 = "sub-tarj-expuestas-vigentes"
+  topic                = google_pubsub_topic.tarj_expuestas_vigentes.id
+  ack_deadline_seconds = 20
+}
+resource "google_pubsub_subscription" "sub_reinsistencia_tarj_expuestas_vigentes" {
+  name                 = "sub-reinsistencia-tarj-expuestas-vigentes"
+  topic                = google_pubsub_topic.reinsistencia_tarj_expuestas_vigentes.id
+  ack_deadline_seconds = 20
+}
+resource "google_pubsub_subscription" "sub_reporte_cargas_tarjetas_lotes_manual" {
+  name                 = "sub-reporte-cargas-tarjetas-lotes-manual"
+  topic                = google_pubsub_topic.reporte_cargas_tarjetas_lotes_manual.id
+  ack_deadline_seconds = 20
+}
+resource "google_pubsub_subscription" "sub_mia_notifica_a_deteccion" {
+  name                 = "sub-mia-notifica-a-deteccion"
+  topic                = google_pubsub_topic.mia_notifica_a_deteccion.id
+  ack_deadline_seconds = 20
+}
+
+##### Crear el secreto (sin valor aún)
+# Ojo, habilitar la API secret manager antes, sino error
+resource "google_secret_manager_secret" "mi_secreto" {
+  secret_id = "mi-secretito"
+  labels = {
+    label = "my-label"
+  }
+  replication {
+    #    automatic = true
+    auto {}
+  }
+}
+# Asignar una versión con el valor al secreto
+resource "google_secret_manager_secret_version" "mi_secreto_version" {
+  secret      = google_secret_manager_secret.mi_secreto.id
+  secret_data = "valor-super-secreto"
+}
+#Para leer secreto desde un cloud run, despues de creado
+#resource "google_secret_manager_secret_iam_member" "acceso" {
+#  secret_id = google_secret_manager_secret.mi_secreto.id
+#  role      = "roles/secretmanager.secretAccessor"
+#  member    = "serviceAccount:mi-cuenta-servicio@mi-proyecto.iam.gserviceaccount.com"
+#}
+
+
+########Creando un Datafow job
+#Opcional, de ser necesario
+#resource "google_service_account" "dataflow_sa" {
+#  account_id   = "dataflow-job-sa"
+#  display_name = "Dataflow Job Service Account"
+#}
+
+# Lanzar job desde una plantilla existente
+#resource "google_dataflow_job" "bucket_normalizacion_to_elasticsearch" {
+#  name              = "bucket-normalizacion-to-elasticsearch-job"
+#  template_gcs_path = "gs://dataflow-templates/latest/Stream_GCS_Text_to_Elasticsearch"
+#  temp_gcs_location = "gs://tu-bucket-temp/temp"
+#  temp_gcs_location = "gs://normalizacion-seguro"
+#  zone              = "us-central1-f"
+#  on_delete         = "cancel" # evita que el job quede corriendo si haces tf destroy
+
+#  parameters = {
+#    inputFilePattern = "gs://tu-bucket-data/archivo.txt
+#    inputFilePattern = "gs://normalizacion-seguro"
+#    elasticsearchUsername = "usuario"       # opcional
+#    elasticsearchPassword = "password"      # opcional
+#    elasticsearchServer   = "https://mi-es-host:9200"
+#    index                 = "gcs-data"
+#    documentType          = "_doc"
+#    batchSize             = "100"
+#  }
+#}
+
+# Lanzar el job desde una plantilla existente
+#resource "google_dataflow_job" "bucket_normalizacion_to_elasticsearch" {
+#  name             = "bucket-normalizacion-to-elasticsearch"
+#  template_gcs_path = "gs://dataflow-templates/latest/Word_Count"
+#  temp_gcs_location = "gs://normalizacion-seguro"
+#
+#  parameters = {
+#    inputFile  = "gs://dataflow-samples/shakespeare/kinglear.txt"
+#    output     = "gs://normalizacion-seguro"
+#  }
+#  on_delete = "cancel" # evita que el job quede corriendo si haces terraform destroy
+#  region    = "us-central1"
+#}
+#La cuenta de servicio asociada al job debe tener permisos como:
+#roles/dataflow.developer
+#roles/storage.objectAdmin       (para leer/escribir desde GCS)
+#roles/iam.serviceAccountUser    (si lanzas con otra cuenta)

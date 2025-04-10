@@ -1,0 +1,13 @@
+Como aplicar? Va a depender del ambiente donde se quiera desplegar.
+Ex. De ser en ambiente preprod:
+
+# Se sugiere esta forma de desplegar, reduce errores y mejora revision de codigo
+cd infra/preprod
+terraform init      # Inicializa ambiente
+terraform fmt       # Formatea
+terraform validate  # Valida sintaxis
+terraform plan      # Previsualiza cambios
+terraform apply     # Aplica cambios
+
+cd ../prod          # Mismo proceder anterior, para produccion
+...
