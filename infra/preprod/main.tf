@@ -3,11 +3,31 @@ provider "google" {
   region  = "us-central1"         #Comun para todos los recursos
 }
 
+# Almacenar remotamente (bucket gcp), inventario terraform proyecto 
 terraform {
   backend "gcs" {
     bucket = "conf-terraform"
     prefix = "estado/infra"
   }
+}
+
+# Habilitando APIs necesarias para el modelo, parte 1
+resource "google_project_service" "run" {
+  service = "run.googleapis.com"
+}
+resource "google_project_service" "vpcaccess" {
+  service = "vpcaccess.googleapis.com"
+}
+resource "google_project_service" "storage" {
+  service = "storage.googleapis.com"
+}
+
+# Acceder a recursos internos e internet en los CRun, necesario definir recurso vpc connector y red
+resource "google_vpc_access_connector" "vpc_connector_crun" {
+  name         = "vpc-connector-crun"
+  network      = "default"
+  region       = "us-central1"
+  ip_cidr_range = "10.8.0.0/28"
 }
 
 module "run_1" {

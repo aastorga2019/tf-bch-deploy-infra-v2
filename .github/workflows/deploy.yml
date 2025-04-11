@@ -48,6 +48,12 @@ jobs:
           cd infra/preprod    #Por ahora corre para ambos env, luego canalizar por DIR
           terraform init
 
+# Para probar todo de cero, comentar en caso necesario
+#      - name: Destruir Terraform
+#        run: |
+#          cd infra/preprod
+#          terraform destroy 
+
       - name: Planificar Terraform
         run: |
           cd infra/preprod
