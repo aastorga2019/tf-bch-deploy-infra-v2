@@ -51,13 +51,14 @@ jobs:
       - name: Planificar Terraform
         run: |
           cd infra/preprod
-          terraform plan -out=tfplan
+          terraform plan 
+#-out=tfplan
 
       - name: Aplicar Terraform
 #        if: ${{ steps.plan.outputs.exitcode == '2' }}   #Apply corre <-> hay nuevos cambios en infra  
         run: |
           cd infra/preprod
-          terraform apply tfplan -auto-approve
+          terraform apply -auto-approve
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
