@@ -52,7 +52,6 @@ jobs:
         run: |
           cd infra/preprod
           terraform plan 
-#-out=tfplan
 
       - name: Aplicar Terraform
 #        if: ${{ steps.plan.outputs.exitcode == '2' }}   #Apply corre <-> hay nuevos cambios en infra  
