@@ -54,9 +54,9 @@ jobs:
           terraform plan -out=tfplan
 
       - name: Aplicar Terraform
+        if: ${{ steps.plan.outputs.exitcode == '2' }}   #El Apply corre, siempre y cuando hay nuevos cambios  
         run: |
           cd infra/preprod
-          if: ${{ steps.plan.outputs.exitcode == '2' }}   #El Apply corre, siempre y cuando hay nuevos cambios  
           terraform apply tfplan -auto-approve
 
       # Runs a single command using the runners shell
