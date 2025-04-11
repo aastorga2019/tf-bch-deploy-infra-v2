@@ -11,3 +11,7 @@ terraform apply     # Aplica cambios
 
 cd ../prod          # Mismo proceder anterior, para produccion
 ...
+
+Tips:
+- Se centraliza/respalda conf infra tf en un bucket gcp,
+-
