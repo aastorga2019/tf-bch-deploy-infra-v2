@@ -1,6 +1,13 @@
 provider "google" {
-  project = "poc-serviciosgcp"
-  region  = "us-central1" #Comun para todos los recursos
+  project = "poc-serviciosgcp"    #Nombre o id proyecto
+  region  = "us-central1"         #Comun para todos los recursos
+}
+
+terraform {
+  backend "gcs" {
+    bucket = "conf-terraform"
+    prefix = "estado/infra"
+  }
 }
 
 module "run_1" {
