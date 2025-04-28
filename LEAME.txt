@@ -11,7 +11,3 @@ terraform apply     # Aplica cambios
 
 cd ../prod          # Mismo proceder anterior, para produccion
 ...
-
-Tips:
-- Se centraliza/respalda/seguridad conf infra tf bucket remoto gcp, llamado conf-terraform, de no existr; crear antes del deploy.
-- cxx
