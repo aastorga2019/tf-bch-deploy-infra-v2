@@ -11,3 +11,9 @@ terraform apply     # Aplica cambios
 
 cd ../prod          # Mismo proceder anterior, para produccion
 ...
+
+25-Abr se avanzo con cloud run, secret, bucket, share vpc, container registry (solo habilita api),... 
+
+Tips:
+- Se centraliza/respalda/seguridad conf infra tf bucket remoto en gcp, llamado conf-terraform, de no existir; crear antes del deploy. Luego subcarpetas estado/infra
+- CloudRunV2Service requiere habilitar "Cloud Run Admin API",
