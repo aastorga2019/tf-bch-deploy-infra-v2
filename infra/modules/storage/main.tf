@@ -10,7 +10,7 @@ resource "google_storage_bucket" "bucket" {
   }
 }
 
-resource "google_project_iam_member" "storage_access" {
-  role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_cloud_run_service.service.template[0].spec[0].service_account_name}"
-}
+#resource "google_project_iam_member" "storage_access" {
+#  role   = "roles/storage.objectAdmin"
+#  member = "serviceAccount:${google_cloud_run_v2_service.service.template[0].spec[0].service_account_name}"
+#}

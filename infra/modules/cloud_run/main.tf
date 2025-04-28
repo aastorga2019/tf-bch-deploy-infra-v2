@@ -23,17 +23,16 @@ resource "google_cloud_run_v2_service" "service" {
   deletion_protection = false
   
   template {
-    spec {
-      containers {
-        image = var.image
-        resources {
-            limits = {
-                memory = "512Mi"
-            }
-        }
-        ports {
-            container_port = 8080  # Default
-        }
+    containers {
+      image = var.image
+      resources {
+          limits = {
+              memory = "512Mi"
+              cpu = "1"
+          }
+      }
+      ports {
+          container_port = 8080  # Default
       }
     }
   }
@@ -41,6 +40,7 @@ resource "google_cloud_run_v2_service" "service" {
     percent         = 100
     type = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   }
+  
 }
 
 resource "google_cloud_run_service_iam_member" "invoker" {

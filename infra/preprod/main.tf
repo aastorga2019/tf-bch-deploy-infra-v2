@@ -6,13 +6,20 @@ terraform {
   }
 }
 
+##### Declarar elproyecto a trabajar
+provider "google" {
+  project = "poc-serviciosgcp"
+  region  = "us-central1" #Comun para todos los recursos
+}
+
 ##### Habilitando APIs necesarias para el modelo, parte 1
 resource "google_project_service" "container_registry" {
   service = "containerregistry.googleapis.com"
 }
-#resource "google_project_service" "run" {
-#  service = "run.googleapis.com"
-#}
+
+resource "google_project_service" "run" {
+  service = "run.googleapis.com"
+}
 
 # Fue necesario habilitar este vpcaccess api, manual primero...
 resource "google_project_service" "vpcaccess" {
@@ -28,42 +35,55 @@ resource "google_project_service" "vpcaccess" {
 #}
 #### OJO, pueden haber mas API para habilitar, a medida que cresca el proyecto
 
-provider "google" {
-  project = "poc-serviciosgcp"
-  region  = "us-central1" #Comun para todos los recursos
-}
-
 ######## Manejo de Modulos
 module "run_1" {
+  service_name = "crun-tarjetas"
   vpc_connector_name = "conector-crun-feed"
   source = "../modules/cloud_run"
   region = "us-central1"
   image  = "gcr.io/cloudrun/hello:latest"
-  service_name = "cloud-run-feed"
   network            = "default"      # hay que asignarlo, deja en Default
   ip_cidr_range      = "10.5.0.0/28"  # Segun lo que entreguen
+  
+  depends_on = [      # Esperar que APIs relacionadas se activen, antes de crear recurso
+    google_project_service.run,
+    google_project_service.vpcaccess
+  ]
 }
 
 module "run_2" {
+  service_name = "crun-trafico"
   vpc_connector_name = "conector-crun-normaliza"
   source = "../modules/cloud_run"
   region = "us-central1"
   image  = "gcr.io/cloudrun/hello:latest"
-  service_name = "cloud-run-normaliza"
   network            = "default"
   ip_cidr_range      = "10.6.0.0/28"        # Segun lo que entreguen
+  
+  depends_on = [      # Esperar que API se active, antes de crear conector
+    google_project_service.vpcaccess
+  ]
 }
 
-module "bucket_2" {
-  source = "../modules/storage"
-  name   = "normalizacion-seguro"
-  region = "US"
-}
+#module "run_3" {
+#  vpc_connector_name = "conector-crun-notifica"
+#  source = "../modules/cloud_run"
+#  region = "us-central1"
+#  image  = "gcr.io/cloudrun/hello:latest"
+#  service_name = "crun-notificacion"
+#  network            = "default"
+#  ip_cidr_range      = "10.5.0.0/28"        # Segun lo que entreguen
+#}
+
+#module "bucket_2" {
+#  source = "../modules/storage"
+#  name   = "normalizacion-seguro"
+#  region = "US"
+#}
 
 module "secret_api_key" {
   source        = "../modules/secret_manager"
-#  project_id    = var.project_id
-  secret_id     = "api-key"
+  secret_id     = "uciaa_exposed_card"
   secret_value  = "Cambia este valor, cuando te falle uso secreto"
 }
 
